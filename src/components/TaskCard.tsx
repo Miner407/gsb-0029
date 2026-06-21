@@ -1,4 +1,4 @@
-import { Check, Edit2, Trash2, Play, Clock, Tag } from 'lucide-react';
+import { Check, Edit2, Trash2, Play, Clock, Tag, Calendar } from 'lucide-react';
 import type { Task } from '../types';
 import { calculateTaskProgress } from '../utils/statistics';
 import { useStore } from '../store/useStore';
@@ -22,12 +22,13 @@ const tagColors = [
 const getTagColor = (index: number) => tagColors[index % tagColors.length];
 
 export const TaskCard = ({ task, showActions = true, onEdit, compact = false }: TaskCardProps) => {
-  const { activeTask, setActiveTask, updateTask, deleteTask, timerState, startTimer } = useStore();
+  const { activeTask, setActiveTask, updateTask, deleteTask, timerState, startTimer, weeklyPlans } = useStore();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const progress = calculateTaskProgress(task);
   const isActive = activeTask?.id === task.id;
   const canStart = timerState === 'idle';
+  const associatedPlan = weeklyPlans.find((p) => p.id === task.weeklyPlanId);
 
   const handleQuickStart = () => {
     if (canStart) {
@@ -82,7 +83,7 @@ export const TaskCard = ({ task, showActions = true, onEdit, compact = false }: 
             }`}>
               {task.name}
             </p>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className="text-xs text-gray-400">
                 {task.completedPomodoros}/{task.estimatedPomodoros} 番茄
               </span>
@@ -90,6 +91,12 @@ export const TaskCard = ({ task, showActions = true, onEdit, compact = false }: 
                 <span className="flex items-center gap-1 text-xs text-gray-400">
                   <Tag className="w-3 h-3" />
                   {task.tags[0]}
+                </span>
+              )}
+              {associatedPlan && (
+                <span className="flex items-center gap-1 text-xs text-secondary-600">
+                  <Calendar className="w-3 h-3" />
+                  周计划
                 </span>
               )}
             </div>
@@ -119,7 +126,7 @@ export const TaskCard = ({ task, showActions = true, onEdit, compact = false }: 
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
             <h3 className={`font-semibold ${
               task.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-800'
             }`}>
@@ -128,6 +135,12 @@ export const TaskCard = ({ task, showActions = true, onEdit, compact = false }: 
             <span className={`tag tag-sm ${statusConfig[task.status].class}`}>
               {statusConfig[task.status].label}
             </span>
+            {associatedPlan && (
+              <span className="tag tag-sm tag-secondary flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {associatedPlan.title}
+              </span>
+            )}
           </div>
 
           {task.description && (

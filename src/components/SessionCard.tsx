@@ -1,4 +1,4 @@
-import { Clock, AlertCircle, CheckCircle, Edit3, Trash2, User } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, Trash2, User } from 'lucide-react';
 import type { PomodoroSession, Task } from '../types';
 import { formatDateTime, formatDuration } from '../utils/dateUtils';
 import { useStore } from '../store/useStore';

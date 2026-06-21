@@ -1,6 +1,14 @@
 const TASKS_KEY = 'pomodoro_tasks';
 const SESSIONS_KEY = 'pomodoro_sessions';
 const SETTINGS_KEY = 'pomodoro_settings';
+const WEEKLY_PLANS_KEY = 'pomodoro_weekly_plans';
+
+export const STORAGE_KEYS = {
+  tasks: TASKS_KEY,
+  sessions: SESSIONS_KEY,
+  settings: SETTINGS_KEY,
+  weeklyPlans: WEEKLY_PLANS_KEY,
+} as const;
 
 export const storage = {
   getTasks: () => {
@@ -54,10 +62,28 @@ export const storage = {
     }
   },
 
+  getWeeklyPlans: () => {
+    try {
+      const data = localStorage.getItem(WEEKLY_PLANS_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  setWeeklyPlans: (plans: unknown[]) => {
+    try {
+      localStorage.setItem(WEEKLY_PLANS_KEY, JSON.stringify(plans));
+    } catch (e) {
+      console.error('Failed to save weekly plans:', e);
+    }
+  },
+
   clearAll: () => {
     localStorage.removeItem(TASKS_KEY);
     localStorage.removeItem(SESSIONS_KEY);
     localStorage.removeItem(SETTINGS_KEY);
+    localStorage.removeItem(WEEKLY_PLANS_KEY);
   },
 
   exportData: () => {
@@ -65,14 +91,17 @@ export const storage = {
       tasks: storage.getTasks(),
       sessions: storage.getSessions(),
       settings: storage.getSettings(),
+      weeklyPlans: storage.getWeeklyPlans(),
       exportedAt: new Date().toISOString(),
+      version: '2.0',
     };
   },
 
-  importData: (data: { tasks: unknown[]; sessions: unknown[]; settings?: unknown }) => {
+  importData: (data: { tasks: unknown[]; sessions: unknown[]; settings?: unknown; weeklyPlans?: unknown[] }) => {
     if (data.tasks) storage.setTasks(data.tasks);
     if (data.sessions) storage.setSessions(data.sessions);
     if (data.settings) storage.setSettings(data.settings);
+    if (data.weeklyPlans) storage.setWeeklyPlans(data.weeklyPlans);
   },
 };
 

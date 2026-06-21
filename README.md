@@ -1,57 +1,254 @@
-# React + TypeScript + Vite
+# 个人学习番茄钟与任务复盘应用 v2.0
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+基于 React 18 + TypeScript + Vite 的个人学习效率工具，集成番茄计时、任务管理、周计划目标追踪、数据统计、历史复盘等功能。所有数据本地存储，开箱即用，无需后端服务。
 
-Currently, two official plugins are available:
+## ✨ 核心功能
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🍅 番茄计时
+- 可自定义的专注/休息时长，默认 25+5 分钟
+- 开始/暂停/继续/放弃完整状态管理
+- 专注完成提示音（Web Audio API）
+- **关联周计划**：番茄钟可绑定到具体周计划，自动计入目标达成率
 
-## Expanding the ESLint configuration
+### 📋 任务管理
+- 创建任务：名称、描述、标签、预估番茄数、状态
+- **关联周计划**：任务可以绑定到进行中的周计划
+- 任务卡片显示进度、关联周计划标签
+- 标签筛选系统
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 🎯 周计划与目标追踪（v2.0 新增）
+- 创建周计划：设定目标专注时长、目标番茄数
+- 重点标签设置：指定本周的学习主题
+- 智能任务推荐：首页基于周计划标签推荐今日任务
+- 双进度条展示：专注时长达成率 + 番茄数达成率
+- 标签贡献时长分析（饼图 + 条形图）
+- 未达成原因备注（周期结束后填写复盘）
+- 状态管理：进行中 / 已完成 / 未达成
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### 📊 数据统计
+- 今日/近 7 天 / 近 30 天多维度统计
+- 近 7 天柱状图 + 近 30 天趋势面积图
+- 标签分布累计饼图
+- 本周周计划达成率面板
+- 各标签贡献时长（本周）
+- 历史周计划汇总
+- 任务完成排行榜（Top 任务）
+
+### 📝 历史记录与复盘
+- 按日期分组展示番茄记录
+- **多条件组合筛选**：
+  - 周计划筛选
+  - 标签多选筛选
+  - 完成状态筛选（完成/放弃/手动）
+  - 日期范围筛选
+  - 关键词搜索（任务名、复盘内容）
+- 导出当前筛选结果为 **Markdown 报告**
+- 编辑复盘备注（总结 + 深度复盘备注双字段）
+- 待复盘记录提醒（首页顶部）
+
+### 💾 数据导入导出
+- **完整数据导出**：任务、番茄记录、复盘备注、周计划、设置，统一 JSON v2 格式
+- **格式校验导入**：
+  - 自动检测字段完整性
+  - 给出错误列表和警告列表
+  - 不通过的拒绝导入避免数据损坏
+- **双模式导入**：
+  - 合并模式（推荐）：按 ID 去重，保留新旧数据
+  - 替换模式（危险）：清空现有数据后写入
+- 生成演示数据功能（快速体验）
+- 一键清空（带二次确认）
+
+### 📱 响应式设计
+- 桌面端侧边栏导航
+- 移动端底部导航栏（6 个主入口）
+- 弹窗、筛选器、表单全部支持小屏
+
+## 🚀 快速开始
+
+### 环境要求
+- Node.js >= 18.0.0
+- npm >= 9.0.0 或 pnpm >= 8.0.0
+
+### 安装依赖
+```bash
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  extends: [
-    // other configs...
-    // Enable lint rules for React
-    reactX.configs['recommended-typescript'],
-    // Enable lint rules for React DOM
-    reactDom.configs.recommended,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+### 启动开发服务器
+```bash
+npm run dev
 ```
+默认访问地址：http://localhost:5173
+
+### 构建生产版本
+```bash
+npm run build
+```
+构建产物输出到 `dist/` 目录
+
+### 本地预览生产构建
+```bash
+npm run preview
+```
+
+### 类型检查（TypeScript）
+```bash
+npm run typecheck
+```
+
+### 规范检查（ESLint）
+```bash
+npm run lint
+```
+
+自动修复可修复的规范问题：
+```bash
+npm run lint:fix
+```
+
+## 🧪 手动验证步骤
+
+以下流程用于验证 v2.0 新功能的端到端正确性。首次体验建议先「帮助页 → 生成演示数据」。
+
+### 1. 周计划创建 ✅
+1. 打开「周计划」页，点击「新建周计划」按钮
+2. 填写表单：标题、周开始/结束日期（自动计算）
+3. 拖动目标专注时长（60-3000 min）和目标番茄数（5-100）
+4. 选择或输入重点标签（支持新建+多选）
+5. 填写计划说明，点击「保存」
+6. **预期**：创建成功，周计划列表出现新卡片。若与已存在的周计划周期重叠有警告提示。
+
+### 2. 番茄钟关联周计划 ✅
+1. 确保存在进行中的周计划和至少一个任务
+2. 回到首页，PomodoroTimer 组件上方出现「关联到周计划」下拉
+3. 选择刚创建的周计划，选择一个待办任务
+4. 点击「开始专注」按钮启动番茄钟
+5. 可以等待完成或手动放弃（填写放弃原因）
+6. **预期**：完成后复盘弹窗顶部显示关联的周计划，番茄记录的 weeklyPlanId 字段已正确写入。
+
+### 3. 任务关联周计划 ✅
+1. 打开「任务管理」页面，新建任务
+2. 在表单中看到「关联周计划」下拉（有进行中周计划时出现）
+3. 选择周计划并提交
+4. **预期**：任务卡片出现灰色「Calendar + 周计划名」标签。compact 模式下显示 Calendar 小图标。
+
+### 4. 统计页数据更新 ✅
+1. 打开「数据统计」页面
+2. 顶部 4 个总览卡片显示正确数值
+3. 向下滚动看到「本周计划达成情况」卡片
+4. 检查双进度条、综合达成率、剩余天数、重点标签显示
+5. 若本周有数据，「各标签贡献时长」饼图+条形图正确渲染
+6. 编辑一个已结束的周计划，标记为「未达成」并填写原因备注
+7. **预期**：统计页对应周计划卡片底部出现「未达成原因备注」区块（琥珀色背景）。
+
+### 5. 历史记录筛选与 Markdown 导出 ✅
+1. 打开「历史记录」页面
+2. 点击「高级筛选」展开全部筛选项
+3. 分别测试：搜索关键词、状态下拉、周计划下拉、标签多选按钮、起止日期
+4. 观察已选筛选条件的可视化标签，支持逐个移除和「重置全部」
+5. 筛选结果按日期分组，每组汇总当日专注分钟数
+6. 点击「导出 Markdown」按钮
+7. **预期**：下载 `pomodoro-export-YYYY-MM-DD.md` 文件。文件内容包含总览表、关联计划、按日分组、任务统计等。
+
+### 6. 数据导入格式校验 ✅
+1. 打开「帮助中心」页面
+2. 先点击「导出」保存一份当前数据 JSON
+3. 导入模式选「合并导入」（推荐），选择刚导出的文件
+4. **预期**：结果显示成功，导入数量统计正确，警告列表会提示存在相同 ID 被跳过
+5. 修改 JSON 文件删除必需字段（如 tasks[0].name），再尝试导入
+6. **预期**：校验失败，红色错误框列出具体字段问题，数据未被修改
+7. （可选）切换到「替换模式」导入 → 确认后所有数据被覆盖
+
+### 7. 移动端布局验证 ✅
+使用开发者工具或真实手机验证：
+- 视口宽度 < 768px 时：
+  - 侧边栏隐藏，底部出现 6 图标导航栏（首页/任务/周计划/统计/历史/帮助）
+  - 首页统计卡片 2 列布局
+  - 所有弹窗设置 `max-h-[90vh]`，超出滚动
+  - History 页筛选按钮换行自适应
+  - TaskForm、WeeklyPlanForm、ReviewModal 弹窗可滚动
+- 视口宽度 > 1024px 时：
+  - 侧边栏正常显示
+  - 首页 5 列布局（3+2）正常工作
+  - 图表响应式填充容器
+
+## 🗄️ localStorage 数据位置
+
+所有数据保存在浏览器 localStorage 中，**清理浏览器数据会永久删除**，请定期导出备份。
+
+| 存储 Key             | 内容              | 数据类型                 |
+| -------------------- | ----------------- | ------------------------ |
+| `pomodoro_tasks`       | 任务列表          | `Task[]`                 |
+| `pomodoro_sessions`    | 番茄记录          | `PomodoroSession[]`      |
+| `pomodoro_settings`    | 个性化设置        | `AppSettings`            |
+| `pomodoro_weekly_plans` | 周计划（v2.0 新增） | `WeeklyPlan[]`           |
+
+打开浏览器 DevTools → Application → Local Storage → 当前域名 即可查看和手动编辑。
+
+## 🛠️ 技术栈
+
+| 类别     | 技术                                   | 版本  |
+| -------- | -------------------------------------- | ----- |
+| 框架     | React                                  | 18.x  |
+| 语言     | TypeScript                             | 5.x   |
+| 构建工具 | Vite                                   | 5.x   |
+| 路由     | React Router DOM                       | 7.x   |
+| 状态管理 | Zustand                                | 4.x   |
+| 样式     | Tailwind CSS                           | 3.x   |
+| 图表     | Recharts                               | 2.x   |
+| 图标     | Lucide React                           | 最新  |
+| 规范检查 | ESLint + TypeScript ESLint             | -     |
+
+## 📁 核心目录结构
+
+```
+src/
+├── components/          # 通用组件
+│   ├── Layout/         # 布局与导航
+│   ├── PomodoroTimer/  # 番茄钟计时器子组件
+│   ├── WeeklyPlanForm.tsx   # 周计划表单弹窗
+│   ├── WeeklyPlanCard.tsx   # 周计划卡片
+│   ├── TaskForm.tsx    # 任务表单
+│   ├── TaskCard.tsx    # 任务卡片
+│   ├── ReviewModal.tsx # 复盘弹窗
+│   └── ...             # 其余通用组件
+├── pages/              # 页面（路由入口）
+│   ├── Dashboard.tsx   # 首页
+│   ├── TaskManager.tsx # 任务管理
+│   ├── WeeklyPlanner.tsx # 周计划管理（v2.0 新增）
+│   ├── Statistics.tsx  # 数据统计
+│   ├── History.tsx     # 历史记录
+│   └── Help.tsx        # 帮助中心
+├── store/
+│   └── useStore.ts     # Zustand 全局状态
+├── types/
+│   └── index.ts        # 类型定义（v2.0 扩展）
+├── utils/
+│   ├── dateUtils.ts    # 日期工具（v2.0 扩展）
+│   ├── statistics.ts   # 统计/筛选/导入导出（v2.0 扩展）
+│   └── storageUtils.ts # 本地存储（v2.0 扩展）
+└── styles/
+    └── index.css       # Tailwind + 全局样式
+```
+
+## 📋 版本更新日志
+
+### v2.0.0
+- ✨ 新增周计划与目标追踪系统（WeeklyPlanner 页）
+- ✨ 任务/番茄钟可关联周计划，自动计入达成率
+- ✨ 首页展示周计划进度卡片、今日建议任务、待复盘提醒
+- ✨ 统计页新增周计划达成率、标签贡献饼图、未达成原因备注
+- ✨ 历史记录页：周计划/标签/状态/日期范围组合筛选
+- ✨ 历史记录：导出当前筛选结果为 Markdown 报告
+- ✨ 帮助页：导入格式校验、合并/替换双模式、结果可视化
+- ✨ 导出 JSON v2 格式，新增 version/weeklyPlans 字段
+- 🎨 首页、统计页、历史页信息密度与视觉层级重设计
+- 📱 全页面移动端适配（6 图标底部导航）
+- ✅ 新增可重复的手动验证步骤清单
+
+### v1.0.0
+- 🍅 番茄计时基础功能
+- 📋 任务管理与标签系统
+- 📊 基础数据统计与图表
+- 📝 历史记录与复盘备注
+- 💾 localStorage 持久化

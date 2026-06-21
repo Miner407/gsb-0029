@@ -1,544 +1,566 @@
-import { useState } from 'react';
-import { 
-  HelpCircle, CheckCircle2, Play, Pause, X, Plus, Edit3, Trash2, 
-  ChevronDown, ChevronUp, Download, Upload, Database, FileText
+import { useState, useRef } from 'react';
+import {
+  HelpCircle,
+  Clock,
+  Target,
+  BarChart3,
+  Database,
+  Download,
+  Upload,
+  Trash2,
+  CheckCircle2,
+  AlertTriangle,
+  FileJson,
+  Info,
+  ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
+import { getTodayStr, formatDateTime } from '../utils/dateUtils';
+import { STORAGE_KEYS } from '../utils/storageUtils';
+import { validateImportData } from '../utils/statistics';
 
-interface VerificationStep {
-  id: string;
-  title: string;
-  description: string;
-  steps: string[];
-  expectedResult: string;
-  completed: boolean;
+interface ImportResult {
+  success: boolean;
+  message: string;
+  warnings?: string[];
+  errors?: string[];
+  details?: {
+    tasksImported: number;
+    sessionsImported: number;
+    plansImported: number;
+    mode: 'merge' | 'replace';
+  };
 }
 
 export const Help = () => {
-  const { resetAllData, generateDemoData, tasks, sessions } = useStore();
-  const [expandedSection, setExpandedSection] = useState<string | null>('verification');
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+  const { resetAllData, exportAllData, importAllData, generateDemoData, tasks, sessions, weeklyPlans, settings } =
+    useStore();
 
-  const verificationSteps: VerificationStep[] = [
-    {
-      id: 'create-task',
-      title: '1. 创建任务',
-      description: '验证任务创建功能是否正常工作',
-      steps: [
-        '点击导航栏的「任务」进入任务管理页面',
-        '点击右上角「新建任务」按钮',
-        '填写任务名称（如：测试任务）',
-        '添加1-2个标签（如：学习、测试）',
-        '设置预估番茄数为2',
-        '点击「创建」按钮',
-      ],
-      expectedResult: '任务列表中出现新创建的任务，显示任务名称、标签和进度条',
-      completed: completedSteps.has('create-task'),
-    },
-    {
-      id: 'edit-task',
-      title: '2. 编辑任务',
-      description: '验证任务编辑功能是否正常工作',
-      steps: [
-        '在任务列表中找到刚创建的任务',
-        '点击任务右侧的编辑图标（铅笔）',
-        '修改任务名称和描述',
-        '添加或删除标签',
-        '点击「保存」按钮',
-      ],
-      expectedResult: '任务信息更新为修改后的内容',
-      completed: completedSteps.has('edit-task'),
-    },
-    {
-      id: 'start-timer',
-      title: '3. 启动番茄钟',
-      description: '验证番茄钟计时功能是否正常工作',
-      steps: [
-        '返回首页，在待办任务列表中点击刚才创建的任务',
-        '确认任务已被选中（显示橙色边框）',
-        '选择25分钟时长',
-        '点击「开始专注」按钮',
-        '观察倒计时是否开始，圆形进度条是否动画',
-      ],
-      expectedResult: '计时器开始倒计时，显示「专注中」状态，圆形进度条逐渐减少',
-      completed: completedSteps.has('start-timer'),
-    },
-    {
-      id: 'pause-resume',
-      title: '4. 暂停和继续',
-      description: '验证暂停和继续功能是否正常工作',
-      steps: [
-        '在计时过程中点击「暂停」按钮',
-        '确认计时器暂停，显示「已暂停」状态',
-        '等待几秒，确认时间没有继续减少',
-        '点击「继续」按钮',
-        '确认计时器继续运行',
-      ],
-      expectedResult: '暂停时时间停止，继续后时间继续减少',
-      completed: completedSteps.has('pause-resume'),
-    },
-    {
-      id: 'abandon-timer',
-      title: '5. 放弃番茄钟',
-      description: '验证放弃功能是否正常工作',
-      steps: [
-        '启动一个新的番茄钟（至少等待1分钟）',
-        '点击「放弃」按钮',
-        '在弹出的对话框中填写放弃原因',
-        '点击「确认放弃」',
-        '前往历史记录页面查看',
-      ],
-      expectedResult: '历史记录中出现一条「已放弃」的记录，显示放弃原因',
-      completed: completedSteps.has('abandon-timer'),
-    },
-    {
-      id: 'complete-timer',
-      title: '6. 完成番茄钟和复盘',
-      description: '验证完成和复盘功能是否正常工作',
-      steps: [
-        '启动一个1分钟的番茄钟（方便快速测试）',
-        '等待计时结束',
-        '在复盘弹窗中设置打断次数为1次',
-        '填写学习总结',
-        '点击「保存记录」',
-      ],
-      expectedResult: '历史记录中出现一条「已完成」的记录，显示打断次数和总结',
-      completed: completedSteps.has('complete-timer'),
-    },
-    {
-      id: 'filter-tags',
-      title: '7. 按标签筛选',
-      description: '验证标签筛选功能是否正常工作',
-      steps: [
-        '创建多个带有不同标签的任务',
-        '在首页或任务管理页面点击某个标签',
-        '观察任务列表是否只显示包含该标签的任务',
-        '点击「清除筛选」按钮',
-      ],
-      expectedResult: '筛选后只显示符合条件的任务，清除筛选后恢复全部显示',
-      completed: completedSteps.has('filter-tags'),
-    },
-    {
-      id: 'manual-entry',
-      title: '8. 补录记录',
-      description: '验证手动补录功能是否正常工作',
-      steps: [
-        '进入历史记录页面',
-        '点击右上角「补录记录」按钮',
-        '选择一个任务，填写专注时长和开始时间',
-        '点击「保存记录」',
-      ],
-      expectedResult: '历史记录中出现一条「补录」的记录',
-      completed: completedSteps.has('manual-entry'),
-    },
-    {
-      id: 'statistics',
-      title: '9. 查看统计数据',
-      description: '验证统计功能是否正常工作',
-      steps: [
-        '完成至少2个番茄钟',
-        '进入统计页面',
-        '查看今日统计数据',
-        '查看近7天趋势图表',
-        '查看每日详情表格',
-      ],
-      expectedResult: '统计数据正确显示，图表正常渲染，数据与实际记录一致',
-      completed: completedSteps.has('statistics'),
-    },
-    {
-      id: 'data-persistence',
-      title: '10. 数据持久化',
-      description: '验证localStorage存储功能是否正常工作',
-      steps: [
-        '确认当前有任务和番茄记录',
-        '刷新浏览器页面',
-        '重新打开应用',
-        '检查任务和记录是否仍然存在',
-      ],
-      expectedResult: '刷新页面后，所有数据保持不变',
-      completed: completedSteps.has('data-persistence'),
-    },
-  ];
-
-  const toggleStep = (stepId: string) => {
-    setCompletedSteps((prev) => {
-      const next = new Set(prev);
-      if (next.has(stepId)) {
-        next.delete(stepId);
-      } else {
-        next.add(stepId);
-      }
-      return next;
-    });
-  };
-
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importMode, setImportMode] = useState<'merge' | 'replace'>('merge');
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleExport = () => {
-    const data = {
-      tasks,
-      sessions,
-      exportedAt: new Date().toISOString(),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const data = exportAllData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `pomodoro-data-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pomodoro-backup-${getTodayStr()}.json`;
+    link.click();
     URL.revokeObjectURL(url);
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleImport = (file: File) => {
+    setIsImporting(true);
+    setImportResult(null);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = (e) => {
       try {
-        const data = JSON.parse(event.target?.result as string);
-        if (data.tasks && data.sessions) {
-          localStorage.setItem('pomodoro_tasks', JSON.stringify(data.tasks));
-          localStorage.setItem('pomodoro_sessions', JSON.stringify(data.sessions));
-          window.location.reload();
-        } else {
-          alert('无效的数据文件格式');
+        const raw = e.target?.result as string;
+        let parsedData: unknown;
+        try {
+          parsedData = JSON.parse(raw);
+        } catch {
+          setImportResult({
+            success: false,
+            message: '文件解析失败：JSON 格式无效',
+            errors: ['请检查导出文件是否被篡改'],
+          });
+          setIsImporting(false);
+          return;
         }
-      } catch {
-        alert('文件解析失败');
+
+        const validation = validateImportData(parsedData);
+
+        if (!validation.valid) {
+          setImportResult({
+            success: false,
+            message: `格式校验未通过，共发现 ${validation.errors.length} 个严重错误`,
+            errors: validation.errors,
+            warnings: validation.warnings,
+          });
+          setIsImporting(false);
+          return;
+        }
+
+        const result = importAllData(parsedData, importMode);
+
+        setImportResult({
+          success: true,
+          message:
+            importMode === 'merge'
+              ? '数据合并导入成功，重复 ID 已自动去重'
+              : '数据替换导入成功，所有数据已覆盖',
+          warnings: validation.warnings.length > 0 ? validation.warnings : undefined,
+          details: {
+            tasksImported: result.tasksImported || 0,
+            sessionsImported: result.sessionsImported || 0,
+            plansImported: result.plansImported || 0,
+            mode: importMode,
+          },
+        });
+      } catch (err) {
+        setImportResult({
+          success: false,
+          message: `导入过程中发生错误：${(err as Error).message}`,
+        });
+      } finally {
+        setIsImporting(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
-    reader.readAsText(file);
+
+    reader.onerror = () => {
+      setImportResult({
+        success: false,
+        message: '文件读取失败，请重试',
+      });
+      setIsImporting(false);
+    };
+
+    reader.readAsText(file, 'utf-8');
   };
 
-  const progress = Math.round((completedSteps.size / verificationSteps.length) * 100);
+  const handleReset = () => {
+    resetAllData();
+    setShowResetConfirm(false);
+    localStorage.removeItem(STORAGE_KEYS.tasks);
+    localStorage.removeItem(STORAGE_KEYS.sessions);
+    localStorage.removeItem(STORAGE_KEYS.settings);
+    localStorage.removeItem(STORAGE_KEYS.weeklyPlans);
+  };
+
+  const faqItems = [
+    {
+      icon: Clock,
+      question: '番茄工作法是什么？',
+      answer:
+        '番茄工作法是一种时间管理方法，将工作时间拆分为 25 分钟的专注时段和 5 分钟的短休息。每完成 4 个番茄钟进行一次 15-30 分钟的长休息，有效提升专注力和避免疲劳。',
+    },
+    {
+      icon: Target,
+      question: '如何创建有效的任务？',
+      answer:
+        '任务名称要具体可执行（避免太宽泛的描述），合理预估需要的番茄数（通常单任务 2-6 个番茄），添加标签方便后续按主题归类复盘。优先创建可以在今天内完成的小任务。',
+    },
+    {
+      icon: BarChart3,
+      question: '复盘有什么价值？',
+      answer:
+        '每次完成番茄钟后及时记录「完成了什么」「遇到了什么」「有什么启发」，累计起来就是宝贵的学习日记。统计页面可以按标签、时间维度分析效率模式，帮你找到自己的高效时段。',
+    },
+    {
+      icon: Database,
+      question: '数据保存在哪里？',
+      answer:
+        `所有数据保存在浏览器的 localStorage 中，具体 key 为：${STORAGE_KEYS.tasks}（任务）、${STORAGE_KEYS.sessions}（番茄记录）、${STORAGE_KEYS.settings}（设置）、${STORAGE_KEYS.weeklyPlans}（周计划）。请定期导出备份，清理浏览器数据会导致丢失。`,
+    },
+    {
+      icon: Sparkles,
+      question: '什么是周计划功能？',
+      answer:
+        '周计划功能可以帮你设定本周的专注时长目标、番茄数目标，并指定重点关注的学习标签。首页会展示本周进度和智能推荐的任务。统计页可以看到每个标签的贡献占比和未达成原因。',
+    },
+    {
+      icon: ShieldAlert,
+      question: '导入数据时如何避免丢失？',
+      answer:
+        '推荐使用「合并导入」模式，系统会按 ID 自动去重，不会覆盖已有的相同 ID 记录。如果选择「替换模式」，所有现有数据会被完全清除，因此替换前请务必先导出当前数据作为备份。',
+    },
+  ];
+
+  const quickTips = [
+    '可以在设置中调整默认番茄时长、休息时长',
+    '长时间专注前，建议先在任务管理中创建好任务清单',
+    '首页的「今日建议」会优先推荐与本周周计划标签匹配的任务',
+    '放弃番茄钟时写下原因，有助于后续分析效率障碍',
+    '每周末记得给周计划做总结，填写未达成原因',
+    '导出的 JSON 备份可用任意文本编辑器查看',
+  ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-gray-800 mb-1">帮助中心</h1>
-        <p className="text-gray-500">功能说明与手动验证指南</p>
+        <p className="text-gray-500 text-sm">使用指南、数据管理与常见问题</p>
       </div>
 
-      <div className="card bg-gradient-to-r from-primary-50 to-secondary-50">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm">
-              <HelpCircle className="w-6 h-6 text-primary-500" />
+      <div className="grid lg:grid-cols-2 gap-5">
+        <div className="card">
+          <div className="flex items-center gap-2 mb-5">
+            <Database className="w-5 h-5 text-primary-500" />
+            <h2 className="font-semibold text-gray-700">数据管理</h2>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="bg-gray-50 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-gray-800">{tasks.length}</p>
+              <p className="text-xs text-gray-500 mt-1">任务数</p>
             </div>
-            <div>
-              <h2 className="font-bold text-gray-800">功能验证进度</h2>
-              <p className="text-sm text-gray-500">
-                {completedSteps.size} / {verificationSteps.length} 项已验证
+            <div className="bg-gray-50 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-gray-800">{sessions.length}</p>
+              <p className="text-xs text-gray-500 mt-1">番茄记录</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-gray-800">{weeklyPlans.length}</p>
+              <p className="text-xs text-gray-500 mt-1">周计划</p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="p-4 rounded-xl border border-success-100 bg-success-50/40">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-800 flex items-center gap-2">
+                    <Download className="w-4 h-4 text-success-600" />
+                    导出完整数据
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    包含任务、番茄记录、复盘备注、周计划、设置。生成 JSON 文件。
+                  </p>
+                </div>
+                <button
+                  onClick={handleExport}
+                  className="btn btn-success btn-sm flex-shrink-0"
+                >
+                  <FileJson className="w-4 h-4" />
+                  导出
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400">
+                建议每周定期导出备份，文件名已包含日期
               </p>
             </div>
-          </div>
-          <div className="text-right">
-            <span className="text-3xl font-bold text-primary-500">{progress}%</span>
-          </div>
-        </div>
-        <div className="progress-bar h-3">
-          <div className="progress-fill" style={{ width: `${progress}%` }} />
-        </div>
-      </div>
 
-      <div className="space-y-4">
-        <div
-          className="card cursor-pointer"
-          onClick={() => toggleSection('verification')}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
+            <div className="p-4 rounded-xl border border-secondary-100 bg-secondary-50/40">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 className="font-medium text-gray-800 flex items-center gap-2">
+                    <Upload className="w-4 h-4 text-secondary-600" />
+                    导入数据备份
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    上传此前导出的 JSON 文件，自动校验格式完整性。
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImport(file);
+                  }}
+                  className="hidden"
+                />
+                <button
+                  disabled={isImporting}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn btn-secondary btn-sm flex-shrink-0 disabled:opacity-50"
+                >
+                  {isImporting ? '处理中...' : '选择文件'}
+                </button>
               </div>
-              <div>
-                <h2 className="font-semibold text-gray-800">手动验证步骤</h2>
-                <p className="text-sm text-gray-500">按步骤验证所有功能是否正常</p>
-              </div>
-            </div>
-            {expandedSection === 'verification' ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
-          </div>
 
-          {expandedSection === 'verification' && (
-            <div className="mt-6 space-y-4">
-              {verificationSteps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`p-4 rounded-xl border-2 transition-all ${
-                    step.completed
-                      ? 'bg-green-50 border-green-200'
-                      : 'bg-white border-gray-100'
+              <div className="flex gap-2 mb-2">
+                <button
+                  onClick={() => setImportMode('merge')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
+                    importMode === 'merge'
+                      ? 'bg-primary-500 text-white border-primary-500'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-primary-300'
                   }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleStep(step.id);
-                      }}
-                      className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
-                        step.completed
-                          ? 'bg-green-500 border-green-500'
-                          : 'border-gray-300 hover:border-primary-400'
+                  合并导入（推荐）
+                </button>
+                <button
+                  onClick={() => setImportMode('replace')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all border ${
+                    importMode === 'replace'
+                      ? 'bg-danger-500 text-white border-danger-500'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-danger-300'
+                  }`}
+                >
+                  替换全部（危险）
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-400 flex items-start gap-1">
+                <Info className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                合并模式按 ID 去重保留两者；替换模式先清空再写入。
+              </p>
+            </div>
+
+            {importResult && (
+              <div
+                className={`p-4 rounded-xl border ${
+                  importResult.success
+                    ? 'bg-success-50 border-success-200'
+                    : 'bg-danger-50 border-danger-200'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  {importResult.success ? (
+                    <CheckCircle2 className="w-5 h-5 text-success-600 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle className="w-5 h-5 text-danger-600 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className={`font-medium text-sm ${
+                        importResult.success ? 'text-success-700' : 'text-danger-700'
                       }`}
                     >
-                      {step.completed && (
-                        <CheckCircle2 className="w-4 h-4 text-white" />
-                      )}
-                    </button>
-                    <div className="flex-1">
-                      <h3 className={`font-medium mb-1 ${
-                        step.completed ? 'text-green-700' : 'text-gray-800'
-                      }`}>
-                        {step.title}
-                      </h3>
-                      <p className="text-sm text-gray-500 mb-3">{step.description}</p>
-                      
-                      <div className="bg-white/70 rounded-lg p-3 mb-3">
-                        <p className="text-xs font-medium text-gray-500 mb-2">操作步骤：</p>
-                        <ol className="text-sm text-gray-600 space-y-1">
-                          {step.steps.map((s, i) => (
-                            <li key={i} className="flex gap-2">
-                              <span className="text-gray-400">{i + 1}.</span>
-                              <span>{s}</span>
-                            </li>
+                      {importResult.message}
+                    </p>
+                    {importResult.details && (
+                      <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-gray-600">
+                        <div className="bg-white rounded-lg p-2 text-center">
+                          <p className="font-bold">{importResult.details.tasksImported}</p>
+                          <p className="text-gray-400 mt-0.5">任务</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-2 text-center">
+                          <p className="font-bold">{importResult.details.sessionsImported}</p>
+                          <p className="text-gray-400 mt-0.5">番茄</p>
+                        </div>
+                        <div className="bg-white rounded-lg p-2 text-center">
+                          <p className="font-bold">{importResult.details.plansImported}</p>
+                          <p className="text-gray-400 mt-0.5">周计划</p>
+                        </div>
+                      </div>
+                    )}
+                    {importResult.warnings && importResult.warnings.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-amber-600 mb-1">
+                          ⚠️ 警告信息（{importResult.warnings.length}）
+                        </p>
+                        <ul className="text-[11px] text-amber-700 space-y-0.5 list-disc list-inside">
+                          {importResult.warnings.slice(0, 5).map((w, i) => (
+                            <li key={i}>{w}</li>
                           ))}
-                        </ol>
+                          {importResult.warnings.length > 5 && (
+                            <li>...还有 {importResult.warnings.length - 5} 条</li>
+                          )}
+                        </ul>
                       </div>
-
-                      <div className="bg-primary-50 rounded-lg p-3">
-                        <p className="text-xs font-medium text-primary-600 mb-1">预期结果：</p>
-                        <p className="text-sm text-primary-700">{step.expectedResult}</p>
+                    )}
+                    {importResult.errors && importResult.errors.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs font-medium text-danger-600 mb-1">
+                          错误详情
+                        </p>
+                        <ul className="text-[11px] text-danger-700 space-y-0.5 list-disc list-inside">
+                          {importResult.errors.slice(0, 5).map((e, i) => (
+                            <li key={i}>{e}</li>
+                          ))}
+                        </ul>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            <div className="p-4 rounded-xl border border-warning-100 bg-warning-50/40">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <div>
+                  <h3 className="font-medium text-gray-800 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-amber-600" />
+                    生成演示数据
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    填充示例任务、番茄记录和周计划，用于体验功能。
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDemoConfirm(true)}
+                  className="btn btn-ghost btn-sm flex-shrink-0 border border-warning-200 text-warning-700 hover:bg-warning-50"
+                >
+                  生成
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl border border-danger-100 bg-danger-50/40">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-medium text-gray-800 flex items-center gap-2">
+                    <Trash2 className="w-4 h-4 text-danger-600" />
+                    清空所有数据
+                  </h3>
+                  <p className="text-xs text-gray-500 mt-1">
+                    删除全部任务、番茄记录、复盘备注、周计划和个性化设置。
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowResetConfirm(true)}
+                  className="btn btn-danger btn-sm flex-shrink-0"
+                >
+                  清空
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="card">
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle className="w-5 h-5 text-secondary-500" />
+              <h2 className="font-semibold text-gray-700">常见问题 FAQ</h2>
+            </div>
+            <div className="space-y-4">
+              {faqItems.map((item, idx) => (
+                <details
+                  key={idx}
+                  className="group rounded-xl border border-gray-100 p-4 hover:border-gray-200 transition-all bg-gray-50/30 open:bg-white open:border-primary-100"
+                >
+                  <summary className="cursor-pointer list-none flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary-100 text-primary-600 flex items-center justify-center flex-shrink-0 group-open:bg-primary-500 group-open:text-white transition-all">
+                      <item.icon className="w-4 h-4" />
+                    </div>
+                    <span className="font-medium text-gray-800 flex-1">
+                      {item.question}
+                    </span>
+                    <span className="text-gray-400 text-sm group-open:hidden">
+                      展开
+                    </span>
+                    <span className="text-primary-500 text-sm hidden group-open:inline">
+                      收起
+                    </span>
+                  </summary>
+                  <p className="mt-3 text-sm text-gray-600 leading-relaxed pl-11">
+                    {item.answer}
+                  </p>
+                </details>
               ))}
             </div>
-          )}
-        </div>
-
-        <div
-          className="card cursor-pointer"
-          onClick={() => toggleSection('quickstart')}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                <Play className="w-5 h-5 text-primary-600" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-gray-800">快速入门</h2>
-                <p className="text-sm text-gray-500">番茄工作法使用指南</p>
-              </div>
-            </div>
-            {expandedSection === 'quickstart' ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
           </div>
 
-          {expandedSection === 'quickstart' && (
-            <div className="mt-6 space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="p-4 bg-primary-50 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold">1</div>
-                    <h3 className="font-medium text-primary-800">创建任务</h3>
-                  </div>
-                  <p className="text-sm text-primary-700">
-                    在任务管理页面创建你的学习任务，设置预估番茄数和标签。
-                  </p>
-                </div>
-                <div className="p-4 bg-secondary-50 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 bg-secondary-500 rounded-full flex items-center justify-center text-white font-bold">2</div>
-                    <h3 className="font-medium text-secondary-800">选择任务</h3>
-                  </div>
-                  <p className="text-sm text-secondary-700">
-                    在首页点击一个任务，设置番茄钟时长，点击开始专注。
-                  </p>
-                </div>
-                <div className="p-4 bg-green-50 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">3</div>
-                    <h3 className="font-medium text-green-800">专注学习</h3>
-                  </div>
-                  <p className="text-sm text-green-700">
-                    在25分钟内专注于任务，尽量避免分心。需要休息时可以暂停。
-                  </p>
-                </div>
-                <div className="p-4 bg-amber-50 rounded-xl">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold">4</div>
-                    <h3 className="font-medium text-amber-800">复盘总结</h3>
-                  </div>
-                  <p className="text-sm text-amber-700">
-                    完成后记录打断次数和学习总结，帮助你持续改进。
-                  </p>
-                </div>
-              </div>
-
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <h3 className="font-medium text-gray-800 mb-2">番茄工作法原则</h3>
-                <ul className="text-sm text-gray-600 space-y-2">
-                  <li className="flex items-start gap-2">
-                    <Play className="w-4 h-4 text-primary-500 mt-0.5 flex-shrink-0" />
-                    <span>一个番茄钟（默认25分钟）内只做一个任务</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Pause className="w-4 h-4 text-secondary-500 mt-0.5 flex-shrink-0" />
-                    <span>每完成一个番茄钟休息5分钟</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <X className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                    <span>如果被打断，记录打断次数或放弃当前番茄钟</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>每完成4个番茄钟，休息15-30分钟</span>
-                  </li>
-                </ul>
-              </div>
+          <div className="card">
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <h2 className="font-semibold text-gray-700">使用小贴士</h2>
             </div>
-          )}
-        </div>
-
-        <div
-          className="card cursor-pointer"
-          onClick={() => toggleSection('data')}
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Database className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="font-semibold text-gray-800">数据管理</h2>
-                <p className="text-sm text-gray-500">数据导入导出与重置</p>
-              </div>
-            </div>
-            {expandedSection === 'data' ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            )}
+            <ul className="space-y-2.5">
+              {quickTips.map((tip, idx) => (
+                <li key={idx} className="flex items-start gap-3 text-sm text-gray-600">
+                  <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          {expandedSection === 'data' && (
-            <div className="mt-6 space-y-4">
-              <div className="grid md:grid-cols-3 gap-4">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    generateDemoData();
-                  }}
-                  className="p-4 bg-secondary-50 rounded-xl border-2 border-transparent hover:border-secondary-200 transition-colors text-left"
-                >
-                  <FileText className="w-8 h-8 text-secondary-500 mb-2" />
-                  <h3 className="font-medium text-secondary-800 mb-1">生成示例数据</h3>
-                  <p className="text-sm text-secondary-600">
-                    快速生成一些示例任务和记录，方便体验功能
-                  </p>
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleExport();
-                  }}
-                  className="p-4 bg-green-50 rounded-xl border-2 border-transparent hover:border-green-200 transition-colors text-left"
-                >
-                  <Download className="w-8 h-8 text-green-500 mb-2" />
-                  <h3 className="font-medium text-green-800 mb-1">导出数据</h3>
-                  <p className="text-sm text-green-600">
-                    将所有数据导出为JSON文件备份
-                  </p>
-                </button>
-
-                <label className="p-4 bg-primary-50 rounded-xl border-2 border-transparent hover:border-primary-200 transition-colors cursor-pointer">
-                  <Upload className="w-8 h-8 text-primary-500 mb-2" />
-                  <h3 className="font-medium text-primary-800 mb-1">导入数据</h3>
-                  <p className="text-sm text-primary-600">
-                    从JSON文件恢复之前导出的数据
-                  </p>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleImport(e);
-                    }}
-                    className="hidden"
-                  />
-                </label>
+          <div className="card bg-gradient-to-br from-primary-50 to-secondary-50 border-primary-100">
+            <div className="flex items-center gap-2 mb-3">
+              <Info className="w-5 h-5 text-primary-500" />
+              <h2 className="font-semibold text-gray-700">关于本应用</h2>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              本项目是一个基于 React + TypeScript + Vite 的个人学习番茄钟与任务复盘工具，
+              集成了番茄计时、任务管理、目标追踪、数据统计、历史复盘等功能。
+              所有数据本地存储，无需后端服务，开箱即用。
+            </p>
+            <div className="mt-4 pt-4 border-t border-white/60 grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <p className="text-gray-500">版本号</p>
+                <p className="font-medium text-gray-700">v2.0.0</p>
               </div>
-
-              <div className="p-4 bg-red-50 rounded-xl border border-red-200">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium text-red-800 mb-1">重置所有数据</h3>
-                    <p className="text-sm text-red-600">
-                      警告：这将删除所有任务和番茄记录，此操作不可撤销
-                    </p>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (confirm('确定要重置所有数据吗？此操作不可撤销！')) {
-                        resetAllData();
-                        setCompletedSteps(new Set());
-                      }
-                    }}
-                    className="btn btn-danger btn-sm"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" />
-                    重置数据
-                  </button>
-                </div>
+              <div>
+                <p className="text-gray-500">导出格式</p>
+                <p className="font-medium text-gray-700">JSON v2 + Markdown</p>
               </div>
-
-              <div className="p-4 bg-gray-50 rounded-xl">
-                <h3 className="font-medium text-gray-800 mb-2">数据完整性检查</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">任务总数</p>
-                    <p className="text-2xl font-bold text-gray-800">{tasks.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">记录总数</p>
-                    <p className="text-2xl font-bold text-gray-800">{sessions.length}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">已完成任务</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      {tasks.filter((t) => t.status === 'completed').length}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">完成番茄</p>
-                    <p className="text-2xl font-bold text-primary-600">
-                      {sessions.filter((s) => s.status === 'completed' || s.status === 'manual').length}
-                    </p>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 mt-4">
-                  数据存储在浏览器的 localStorage 中，清除浏览器数据会导致数据丢失。
-                  建议定期导出数据备份。
-                </p>
+              <div>
+                <p className="text-gray-500">最近启动</p>
+                <p className="font-medium text-gray-700">{formatDateTime(new Date().toISOString())}</p>
+              </div>
+              <div>
+                <p className="text-gray-500">默认番茄</p>
+                <p className="font-medium text-gray-700">{settings.defaultDuration} 分钟</p>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
+
+      {showResetConfirm && (
+        <div className="modal-overlay" onClick={() => setShowResetConfirm(false)}>
+          <div className="modal-content p-6 max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-danger-100 rounded-xl flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-danger-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">确认清空数据？</h3>
+                <p className="text-xs text-gray-500">此操作不可恢复</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-4 bg-danger-50 p-3 rounded-xl border border-danger-100">
+              所有任务、番茄记录、复盘备注、周计划和设置都将被永久删除，且无法恢复。
+              <br />
+              <strong>强烈建议先导出备份！</strong>
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="btn btn-ghost"
+              >
+                取消
+              </button>
+              <button onClick={handleReset} className="btn btn-danger">
+                确认清空
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDemoConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDemoConfirm(false)}>
+          <div className="modal-content p-6 max-w-sm" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800">生成演示数据</h3>
+                <p className="text-xs text-gray-500">将添加示例数据到现有数据</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              系统会生成示例任务、番茄记录、周计划等演示数据，帮助你快速体验完整功能。
+              数据会与现有数据合并，不会覆盖。
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDemoConfirm(false)}
+                className="btn btn-ghost"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  generateDemoData();
+                  setShowDemoConfirm(false);
+                }}
+                className="btn btn-primary"
+              >
+                确认生成
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

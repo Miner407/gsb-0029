@@ -6,240 +6,457 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
-  ComposedChart,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
   Area,
-  Legend,
 } from 'recharts';
-import { Clock, CheckCircle2, Target, TrendingUp, Calendar } from 'lucide-react';
+import {
+  Target,
+  Calendar,
+  TrendingUp,
+  CheckCircle2,
+  Clock,
+  Flame,
+  Award,
+  AlertTriangle,
+  BarChart as BarChartIcon,
+  PieChart as PieChartIcon,
+} from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { formatDuration, getDayOfWeek } from '../utils/dateUtils';
-import { StatCard } from '../components/StatCard';
-import { getTotalFocusTime } from '../utils/statistics';
+import {
+  formatDuration,
+  getDayOfWeek,
+} from '../utils/dateUtils';
+import { WeeklyPlanCard } from '../components/WeeklyPlanCard';
+import { Link } from 'react-router-dom';
 
 export const Statistics = () => {
-  const { sessions, tasks, getStatistics } = useStore();
-  const stats = getStatistics();
+  const {
+    getStatistics,
+    weeklyPlans,
+    tasks,
+    getWeeklyPlanStatistics,
+    getCurrentWeekPlan,
+  } = useStore();
 
-  const chartData = stats.last7Days.map((day) => ({
-    date: day.date.slice(5),
-    星期: getDayOfWeek(day.date),
-    专注分钟: day.totalFocusMinutes,
-    完成番茄: day.completedPomodoros,
-    完成率: Math.round(day.taskCompletionRate * 100),
+  const stats = getStatistics();
+  const currentWeekPlan = getCurrentWeekPlan();
+  const currentWeekStats = currentWeekPlan
+    ? getWeeklyPlanStatistics(currentWeekPlan.id)
+    : null;
+
+  const tagPieData = stats.allTime.tags.map((t) => ({
+    name: t.tag,
+    value: t.minutes,
   }));
 
-  const totalFocusTime = getTotalFocusTime(sessions);
-  const totalCompletedPomodoros = sessions.filter((s) => s.status === 'completed' || s.status === 'manual').length;
-  const totalAbandonedPomodoros = sessions.filter((s) => s.status === 'abandoned').length;
-  const completionRate = totalCompletedPomodoros + totalAbandonedPomodoros > 0
-    ? Math.round((totalCompletedPomodoros / (totalCompletedPomodoros + totalAbandonedPomodoros)) * 100)
-    : 0;
+  const COLORS = [
+    '#6366f1',
+    '#14b8a6',
+    '#f59e0b',
+    '#ef4444',
+    '#8b5cf6',
+    '#06b6d4',
+    '#84cc16',
+    '#f97316',
+  ];
 
-  const averageDailyFocus = stats.last7Days.reduce((sum, day) => sum + day.totalFocusMinutes, 0) / 7;
+  const pastPlans = weeklyPlans
+    .filter((p) => p.id !== currentWeekPlan?.id)
+    .sort((a, b) => new Date(b.weekStartDate).getTime() - new Date(a.weekStartDate).getTime())
+    .slice(0, 4);
+
+  const averageTagContribution =
+    currentWeekStats && currentWeekStats.tagContributions.length > 0
+      ? Math.round(
+          currentWeekStats.tagContributions.reduce((s, t) => s + t.minutes, 0) /
+            currentWeekStats.tagContributions.length
+        )
+      : 0;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-gray-800 mb-1">数据统计</h1>
-        <p className="text-gray-500">追踪你的学习进度和专注趋势</p>
+        <p className="text-gray-500 text-sm">全面分析你的学习专注数据</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          icon={Clock}
-          label="总专注时长"
-          value={formatDuration(totalFocusTime)}
-          subValue={`共 ${totalCompletedPomodoros} 个番茄`}
-          color="primary"
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="番茄完成率"
-          value={`${completionRate}%`}
-          subValue={`放弃 ${totalAbandonedPomodoros} 个`}
-          color="success"
-        />
-        <StatCard
-          icon={Target}
-          label="总任务数"
-          value={tasks.length}
-          subValue={`已完成 ${tasks.filter((t) => t.status === 'completed').length} 个`}
-          color="secondary"
-        />
-        <StatCard
-          icon={TrendingUp}
-          label="日均专注"
-          value={formatDuration(Math.round(averageDailyFocus))}
-          subValue="近7天平均"
-          color="warning"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="card !p-4 flex items-center gap-3">
+          <div className="w-11 h-11 bg-primary-100 rounded-xl flex items-center justify-center">
+            <Clock className="w-5 h-5 text-primary-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">累计专注</p>
+            <p className="text-xl font-bold text-gray-800">
+              {formatDuration(stats.allTime.totalFocusMinutes)}
+            </p>
+          </div>
+        </div>
+        <div className="card !p-4 flex items-center gap-3">
+          <div className="w-11 h-11 bg-success-100 rounded-xl flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5 text-success-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">完成番茄</p>
+            <p className="text-xl font-bold text-gray-800">
+              {stats.allTime.completedPomodoros}
+            </p>
+          </div>
+        </div>
+        <div className="card !p-4 flex items-center gap-3">
+          <div className="w-11 h-11 bg-secondary-100 rounded-xl flex items-center justify-center">
+            <TrendingUp className="w-5 h-5 text-secondary-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">平均专注率</p>
+            <p className="text-xl font-bold text-gray-800">
+              {Math.round(stats.allTime.avgCompletionRate * 100)}%
+            </p>
+          </div>
+        </div>
+        <div className="card !p-4 flex items-center gap-3">
+          <div className="w-11 h-11 bg-warning-100 rounded-xl flex items-center justify-center">
+            <Flame className="w-5 h-5 text-warning-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">活跃标签</p>
+            <p className="text-xl font-bold text-gray-800">
+              {stats.allTime.tags.length}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      {currentWeekPlan && (
         <div className="card">
-          <div className="flex items-center gap-2 mb-6">
-            <Calendar className="w-5 h-5 text-primary-500" />
-            <h2 className="font-semibold text-gray-700">近7天专注时长</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Award className="w-5 h-5 text-amber-500" />
+              <h2 className="font-semibold text-gray-700">
+                本周计划达成情况
+              </h2>
+            </div>
+            <Link
+              to="/weekly"
+              className="text-sm text-primary-600 hover:text-primary-700"
+            >
+              管理周计划
+            </Link>
+          </div>
+          <WeeklyPlanCard plan={currentWeekPlan} />
+
+          {currentWeekStats && currentWeekStats.tagContributions.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <PieChartIcon className="w-4 h-4 text-secondary-500" />
+                各标签贡献时长（本周）
+              </h3>
+              <div className="grid lg:grid-cols-2 gap-6 items-center">
+                <div className="h-60">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={currentWeekStats.tagContributions}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={85}
+                        paddingAngle={2}
+                        dataKey="minutes"
+                        label={({ name, percent }) =>
+                          `${name} ${(percent * 100).toFixed(0)}%`
+                        }
+                      >
+                        {currentWeekStats.tagContributions.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: number) => `${value} 分钟`}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-2.5">
+                  {currentWeekStats.tagContributions.map((item, idx) => {
+                    const maxMin = Math.max(
+                      ...currentWeekStats.tagContributions.map((t) => t.minutes),
+                      1
+                    );
+                    const pct = Math.round((item.minutes / maxMin) * 100);
+                    return (
+                      <div key={item.tag}>
+                        <div className="flex items-center justify-between mb-1 text-sm">
+                          <span className="flex items-center gap-2">
+                            <span
+                              className="w-3 h-3 rounded-full"
+                              style={{
+                                backgroundColor: COLORS[idx % COLORS.length],
+                              }}
+                            />
+                            <span className="font-medium text-gray-700">
+                              {item.tag}
+                            </span>
+                          </span>
+                          <span className="text-gray-500 text-xs">
+                            {item.minutes} 分 · {item.pomodoros}🍅
+                          </span>
+                        </div>
+                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${pct}%`,
+                              backgroundColor: COLORS[idx % COLORS.length],
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-xs text-gray-400 text-center pt-2">
+                    平均每标签贡献 {averageTagContribution} 分钟
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentWeekPlan.status !== 'active' &&
+            currentWeekPlan.unachievedReason && (
+              <div className="mt-5 pt-5 border-t border-gray-100">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-500" />
+                  未达成原因备注
+                </h3>
+                <p className="text-sm text-gray-600 bg-amber-50 p-3 rounded-xl border border-amber-100">
+                  {currentWeekPlan.unachievedReason}
+                </p>
+              </div>
+            )}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-primary-500" />
+            <h2 className="font-semibold text-gray-700">近 30 天专注趋势</h2>
+          </div>
+          <span className="text-xs text-gray-400">
+            累计 {stats.last30Days.reduce((s, d) => s + d.completedPomodoros, 0)} 个番茄
+          </span>
+        </div>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={stats.last30Days}>
+              <defs>
+                <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis
+                dataKey="date"
+                tick={{ fill: '#9ca3af', fontSize: 11 }}
+                tickFormatter={(value) => {
+                  const d = value.slice(5);
+                  return d;
+                }}
+                interval={3}
+              />
+              <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} />
+              <Tooltip
+                formatter={(value: number) => [`${value} 分钟`, '专注时长']}
+                labelFormatter={(label) => `${label} ${getDayOfWeek(label)}`}
+                contentStyle={{
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                }}
+              />
+              <Area
+                type="monotone"
+                dataKey="totalFocusMinutes"
+                stroke="#6366f1"
+                fillOpacity={1}
+                fill="url(#colorMinutes)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-5">
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BarChartIcon className="w-5 h-5 text-secondary-500" />
+              <h2 className="font-semibold text-gray-700">近 7 天番茄完成</h2>
+            </div>
           </div>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorMinutes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#FF6B35" stopOpacity={0.9} />
-                    <stop offset="95%" stopColor="#FF6B35" stopOpacity={0.3} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="星期" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
+              <BarChart data={stats.last7Days}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: '#9ca3af', fontSize: 11 }}
+                  tickFormatter={(value) => getDayOfWeek(value).replace('周', '')}
                 />
-                <YAxis 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                />
+                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} />
                 <Tooltip
+                  formatter={(value: number) => [`${value} 个`, '完成番茄']}
+                  labelFormatter={(label) => `${label} ${getDayOfWeek(label)}`}
                   contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
                     borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    border: '1px solid #e2e8f0',
                   }}
-                  formatter={(value: number) => [`${value} 分钟`, '专注时长']}
                 />
-                <Bar dataKey="专注分钟" fill="url(#colorMinutes)" radius={[8, 8, 0, 0]} />
+                <Bar
+                  dataKey="completedPomodoros"
+                  fill="#14b8a6"
+                  radius={[6, 6, 0, 0]}
+                  name="完成番茄"
+                />
+                <Bar
+                  dataKey="abandonedPomodoros"
+                  fill="#fecaca"
+                  radius={[6, 6, 0, 0]}
+                  name="放弃番茄"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="card">
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp className="w-5 h-5 text-secondary-500" />
-            <h2 className="font-semibold text-gray-700">近7天完成趋势</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <PieChartIcon className="w-5 h-5 text-amber-500" />
+              <h2 className="font-semibold text-gray-700">标签分布（累计）</h2>
+            </div>
           </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorArea" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#004E89" stopOpacity={0.2} />
-                    <stop offset="95%" stopColor="#004E89" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis 
-                  dataKey="星期" 
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                  domain={[0, 100]}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                  }}
-                />
-                <Legend />
-                <Area
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="完成番茄"
-                  stroke="#004E89"
-                  strokeWidth={2}
-                  fill="url(#colorArea)"
-                  name="完成番茄数"
-                />
-                <Line
-                  yAxisId="right"
-                  type="monotone"
-                  dataKey="完成率"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  dot={{ fill: '#10B981', r: 4 }}
-                  activeDot={{ r: 6 }}
-                  name="任务完成率(%)"
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
+          {tagPieData.length === 0 ? (
+            <div className="h-64 flex items-center justify-center text-gray-400 text-sm">
+              暂无数据
+            </div>
+          ) : (
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={tagPieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={85}
+                    paddingAngle={2}
+                    dataKey="value"
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                  >
+                    {tagPieData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => `${value} 分钟`}
+                    contentStyle={{
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="card">
-        <h2 className="font-semibold text-gray-700 mb-4">每日详情</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">日期</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-500">星期</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">专注时长</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">完成番茄</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">放弃番茄</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">完成任务</th>
-                <th className="text-right py-3 px-4 text-sm font-medium text-gray-500">完成率</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...stats.last7Days].reverse().map((day, index) => (
-                <tr 
-                  key={day.date} 
-                  className={`border-b border-gray-50 hover:bg-gray-50 transition-colors ${
-                    index === 0 ? 'bg-primary-50/30' : ''
-                  }`}
-                >
-                  <td className="py-3 px-4 text-sm text-gray-700">{day.date}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{getDayOfWeek(day.date)}</td>
-                  <td className="py-3 px-4 text-sm text-gray-700 text-right font-medium">
-                    {formatDuration(day.totalFocusMinutes)}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-green-600 text-right">
-                    {day.completedPomodoros}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-red-500 text-right">
-                    {day.abandonedPomodoros}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-700 text-right">
-                    {day.tasksCompleted}/{day.totalTasks}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-right">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      day.taskCompletionRate >= 0.7 ? 'bg-green-100 text-green-700' :
-                      day.taskCompletionRate >= 0.4 ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      {Math.round(day.taskCompletionRate * 100)}%
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {pastPlans.length > 0 && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary-500" />
+              <h2 className="font-semibold text-gray-700">历史周计划</h2>
+            </div>
+            <Link
+              to="/weekly"
+              className="text-sm text-primary-600 hover:text-primary-700"
+            >
+              查看全部
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {pastPlans.map((plan) => (
+              <WeeklyPlanCard key={plan.id} plan={plan} compact />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {stats.overall.topTasks.length > 0 && (
+        <div className="card">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="w-5 h-5 text-success-500" />
+            <h2 className="font-semibold text-gray-700">任务完成排行榜</h2>
+          </div>
+          <div className="space-y-3">
+            {stats.overall.topTasks.map((item, idx) => {
+              const task = tasks.find((t) => t.id === item.taskId);
+              if (!task) return null;
+              const maxPom = stats.overall.topTasks[0].pomodoros;
+              return (
+                <div key={item.taskId} className="flex items-center gap-4">
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
+                      idx === 0
+                        ? 'bg-amber-100 text-amber-600'
+                        : idx === 1
+                        ? 'bg-gray-100 text-gray-600'
+                        : idx === 2
+                        ? 'bg-orange-100 text-orange-600'
+                        : 'bg-gray-50 text-gray-400'
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-gray-700 truncate">
+                        {task.name}
+                      </p>
+                      <span className="text-sm text-gray-500 flex-shrink-0 ml-2">
+                        {item.pomodoros} 🍅
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary-400 to-primary-500 rounded-full"
+                        style={{
+                          width: `${Math.round((item.pomodoros / maxPom) * 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

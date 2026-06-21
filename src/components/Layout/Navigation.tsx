@@ -1,9 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Home, ListTodo, BarChart3, History, HelpCircle } from 'lucide-react';
+import { Home, ListTodo, CalendarDays, BarChart3, History, HelpCircle } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: Home, label: '首页' },
   { to: '/tasks', icon: ListTodo, label: '任务' },
+  { to: '/weekly', icon: CalendarDays, label: '周计划' },
   { to: '/statistics', icon: BarChart3, label: '统计' },
   { to: '/history', icon: History, label: '历史' },
   { to: '/help', icon: HelpCircle, label: '帮助' },

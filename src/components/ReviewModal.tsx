@@ -1,29 +1,40 @@
-import { useState } from 'react';
-import { X, Plus, Minus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Plus, Minus, BookOpen, Calendar } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export const ReviewModal = () => {
-  const { showReviewModal, activeTask, submitReview, closeReviewModal } = useStore();
+  const { showReviewModal, activeTask, submitReview, closeReviewModal, activeWeeklyPlan } = useStore();
   const [interruptions, setInterruptions] = useState(0);
   const [summary, setSummary] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
+
+  useEffect(() => {
+    if (!showReviewModal) {
+      setInterruptions(0);
+      setSummary('');
+      setReviewNote('');
+    }
+  }, [showReviewModal]);
 
   if (!showReviewModal) return null;
 
   const handleSubmit = () => {
-    submitReview(interruptions, summary);
+    submitReview(interruptions, summary, reviewNote);
     setInterruptions(0);
     setSummary('');
+    setReviewNote('');
   };
 
   const handleClose = () => {
     closeReviewModal();
     setInterruptions(0);
     setSummary('');
+    setReviewNote('');
   };
 
   return (
     <div className="modal-overlay" onClick={handleClose}>
-      <div className="modal-content p-6 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-content p-6 animate-slide-up max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-green-600">🎉 专注完成！</h2>
           <button
@@ -35,9 +46,20 @@ export const ReviewModal = () => {
         </div>
 
         {activeTask && (
-          <div className="mb-6 p-4 bg-green-50 rounded-xl">
-            <p className="text-sm text-green-600">任务</p>
-            <p className="font-medium text-green-800">{activeTask.name}</p>
+          <div className="space-y-2 mb-6">
+            <div className="p-4 bg-green-50 rounded-xl">
+              <p className="text-sm text-green-600">任务</p>
+              <p className="font-medium text-green-800">{activeTask.name}</p>
+            </div>
+            {activeWeeklyPlan && (
+              <div className="p-3 bg-secondary-50 rounded-xl flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-secondary-500 flex-shrink-0" />
+                <div>
+                  <p className="text-xs text-secondary-600">关联周计划</p>
+                  <p className="text-sm font-medium text-secondary-800">{activeWeeklyPlan.title}</p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -63,7 +85,7 @@ export const ReviewModal = () => {
                 <Plus className="w-5 h-5" />
               </button>
             </div>
-            <div className="flex justify-center gap-2 mt-3">
+            <div className="flex justify-center gap-2 mt-3 flex-wrap">
               {[0, 1, 2, 3, 5].map((num) => (
                 <button
                   key={num}
@@ -87,8 +109,21 @@ export const ReviewModal = () => {
             <textarea
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              placeholder="记录一下本次专注的收获、遇到的问题或改进方向..."
-              className="textarea h-28"
+              placeholder="记录一下本次专注的收获、遇到的问题..."
+              className="textarea h-24"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <BookOpen className="w-4 h-4 inline mr-1" />
+              复盘备注（可选）
+            </label>
+            <textarea
+              value={reviewNote}
+              onChange={(e) => setReviewNote(e.target.value)}
+              placeholder="记录更深层的复盘，如掌握程度、待改进点等..."
+              className="textarea h-24"
             />
           </div>
 

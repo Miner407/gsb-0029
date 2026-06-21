@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Plus, Tag } from 'lucide-react';
+import { X, Plus, Tag, Calendar } from 'lucide-react';
 import type { Task } from '../types';
 import { useStore } from '../store/useStore';
 import { getAllTags } from '../utils/statistics';
@@ -10,15 +10,18 @@ interface TaskFormProps {
 }
 
 export const TaskForm = ({ onClose, editTask }: TaskFormProps) => {
-  const { addTask, updateTask, tasks } = useStore();
+  const { addTask, updateTask, tasks, weeklyPlans, getCurrentWeekPlan } = useStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [estimatedPomodoros, setEstimatedPomodoros] = useState(2);
   const [status, setStatus] = useState<Task['status']>('pending');
+  const [weeklyPlanId, setWeeklyPlanId] = useState<string | undefined>();
 
   const existingTags = getAllTags(tasks);
+  const activePlans = weeklyPlans.filter((p) => p.status === 'active');
+  const currentWeekPlan = getCurrentWeekPlan();
 
   useEffect(() => {
     if (editTask) {
@@ -27,8 +30,11 @@ export const TaskForm = ({ onClose, editTask }: TaskFormProps) => {
       setTags(editTask.tags);
       setEstimatedPomodoros(editTask.estimatedPomodoros);
       setStatus(editTask.status);
+      setWeeklyPlanId(editTask.weeklyPlanId);
+    } else if (currentWeekPlan) {
+      setWeeklyPlanId(currentWeekPlan.id);
     }
-  }, [editTask]);
+  }, [editTask, currentWeekPlan]);
 
   const handleAddTag = () => {
     const trimmedTag = tagInput.trim();
@@ -59,6 +65,7 @@ export const TaskForm = ({ onClose, editTask }: TaskFormProps) => {
       estimatedPomodoros,
       completedPomodoros: editTask?.completedPomodoros || 0,
       status,
+      weeklyPlanId,
     };
 
     if (editTask) {
@@ -176,6 +183,27 @@ export const TaskForm = ({ onClose, editTask }: TaskFormProps) => {
               </div>
             )}
           </div>
+
+          {activePlans.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <Calendar className="w-4 h-4 inline mr-1" />
+                关联周计划
+              </label>
+              <select
+                value={weeklyPlanId || ''}
+                onChange={(e) => setWeeklyPlanId(e.target.value || undefined)}
+                className="input"
+              >
+                <option value="">不关联周计划</option>
+                {activePlans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.title} ({plan.weekStartDate.slice(5)} ~ {plan.weekEndDate.slice(5)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
